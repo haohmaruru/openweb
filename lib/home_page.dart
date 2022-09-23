@@ -4,7 +4,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_archive/flutter_archive.dart';
 import 'package:loadweb/platform_channel.dart';
-import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -76,7 +75,7 @@ class _HomePageState extends State<HomePage> {
           ),
           onTap: () async {
             String fullPath = "";
-            late Directory tempDir;
+            Directory? tempDir;
             // if (Platform.isAndroid) {
             tempDir = await getTemporaryDirectory();
             // } else if (Platform.isIOS) {
@@ -113,11 +112,11 @@ class _HomePageState extends State<HomePage> {
   }
 
   openFile(String path) async {
-    if (Platform.isIOS) {
-      PlatformChannel().openWebView(path);
-    } else {
-      OpenFile.open(path);
-    }
+    // if (Platform.isIOS) {
+    PlatformChannel().openWebView(path);
+    // } else {
+    //   OpenFile.open(path);
+    // }
   }
 
   Future download2(Dio dio, String url, String savePath) async {
