@@ -6,6 +6,7 @@ import 'package:flutter_archive/flutter_archive.dart';
 import 'package:loadweb/platform_channel.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:ndialog/ndialog.dart';
 
 import 'percent_loading.dart';
 
@@ -21,10 +22,12 @@ class _HomePageState extends State<HomePage> {
   ValueNotifier<int> percent = ValueNotifier(0);
   final zipName = "demo.zip";
   final htmlName = "output.html";
+
   @override
   void initState() {
     super.initState();
     requestPermission();
+    loadData();
   }
 
   requestPermission() async {
@@ -57,58 +60,111 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  showAlertDialog(BuildContext context) async {
+    await NAlertDialog(
+      dialogStyle: DialogStyle(titleDivider: true),
+      title: Text("Alert"),
+      content: Text("Internet not connected"),
+      actions: <Widget>[
+        TextButton(
+          child: const Text('Ok'),
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+        ),
+      ],
+    ).show(context);
+  }
+
+  loadData() async {
+    String fullPath = "";
+    Directory? tempDir;
+    tempDir = await getTemporaryDirectory();
+    fullPath = "${tempDir.path}/$zipName";
+    // print('full path ${fullPath}');
+
+    final zipFile = File(fullPath);
+    final outputHtml = File("${tempDir.path}/$htmlName");
+    bool isExistHtml = await outputHtml.exists();
+    if (isExistHtml) {
+      openFile(outputHtml.path);
+    } else {
+      showLoading();
+      bool isExistFileZip = await zipFile.exists();
+      if (!isExistFileZip) {
+        try {
+          final result = await InternetAddress.lookup('example.com');
+          if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
+            await download2(dio, linkDownload, fullPath);
+            try {
+              await ZipFile.extractToDirectory(
+                  zipFile: zipFile, destinationDir: tempDir);
+            } catch (e) {
+              // print(e);
+            }
+            openFile(outputHtml.path);
+          }
+        } on SocketException catch (_) {
+          hideLoading();
+          showAlertDialog(context);
+        }
+      } else {
+        try {
+          print('zipbbb');
+          await ZipFile.extractToDirectory(
+              zipFile: zipFile, destinationDir: tempDir);
+        } catch (e) {
+          // print(e);
+        }
+        openFile(outputHtml.path);
+      }
+      hideLoading();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('test screen')),
-      body: Center(
-        child: InkWell(
-          child: Container(
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              color: Colors.red,
-            ),
-            height: 40,
-            width: 100,
-            child: Text("Open File"),
+        appBar: AppBar(
+          title: Image.asset(
+            "assets/images/icon.png",
+            fit: BoxFit.contain,
+            height: 100,
+            width: 140,
           ),
-          onTap: () async {
-            String fullPath = "";
-            Directory? tempDir;
-            // if (Platform.isAndroid) {
-            tempDir = await getTemporaryDirectory();
-            // } else if (Platform.isIOS) {
-            //   final tempDirPath = await PlatformChannel().getSavePath();
-            //   tempDir = Directory(tempDirPath);
-            // }
-            fullPath = "${tempDir.path}/$zipName";
-            print('full path ${fullPath}');
-
-            final zipFile = File(fullPath);
-            final outputHtml = File("${tempDir.path}/$htmlName");
-            bool isExistHtml = await outputHtml.exists();
-            if (isExistHtml) {
-              openFile(outputHtml.path);
-            } else {
-              showLoading();
-              bool isExistFileZip = await zipFile.exists();
-              if (!isExistFileZip) {
-                await download2(dio, linkDownload, fullPath);
-              }
-              try {
-                await ZipFile.extractToDirectory(
-                    zipFile: zipFile, destinationDir: tempDir);
-              } catch (e) {
-                print(e);
-              }
-              hideLoading();
-              openFile(outputHtml.path);
-            }
-          },
         ),
-      ),
-    );
+        body: Stack(
+          children: <Widget>[
+            Container(
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage("assets/images/bg_sp2.png"),
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+            Center(
+              child: InkWell(
+                child: Container(
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    color: Colors.blue,
+                  ),
+                  height: 40,
+                  width: 100,
+                  child: Text(
+                    "Download file",
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+                onTap: () async {
+                  loadData();
+                },
+              ),
+            )
+          ],
+        ));
   }
 
   openFile(String path) async {
